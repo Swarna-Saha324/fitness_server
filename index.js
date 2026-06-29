@@ -217,3 +217,109 @@ app.get('/api/users', async (req, res) => {
       }
     });
 
+    //5. CLASSES MANAGEMENT PIPELINE
+   
+    /*app.post('/api/classes', async (req, res) => {
+      try {
+        const classData = req.body;
+        const newClass = {
+          name: classData.name,
+          image: classData.image,
+          category: classData.category,
+          difficulty: classData.difficulty,
+          duration: parseInt(classData.duration) || 0,
+          scheduleDays: classData.scheduleDays,
+          scheduleTime: classData.scheduleTime,
+          price: parseFloat(classData.price) || 0,
+          description: classData.description,
+          trainerEmail: classData.trainerEmail,
+          trainerName: classData.trainerName,
+          status: "pending", 
+          attendees: [], 
+          createdAt: new Date()
+        };
+        const result = await classesCollection.insertOne(newClass);
+        res.status(201).send({ success: true, insertedId: result.insertedId });
+      } catch (error) {
+        res.status(500).send({ message: "Failed to create class", error: error.message });
+      }
+    });*/
+    app.post('/api/classes', async (req, res) => {
+  try {
+    const classData = req.body;
+    const newClass = {
+      name: classData.name,
+      image: classData.image,
+      category: classData.category,
+      difficulty: classData.difficulty,
+      duration: parseInt(classData.duration) || 0,
+      scheduleDays: classData.scheduleDays,
+      scheduleTime: classData.scheduleTime,
+      price: parseFloat(classData.price) || 0,
+      description: classData.description,
+      trainerEmail: classData.trainerEmail,
+      trainerName: classData.trainerName,
+      status: "pending", 
+      attendees: [], 
+      totalSeats: parseInt(classData.totalSeats) || 0, 
+      bookedSlots: 0, 
+      createdAt: new Date()
+    };
+    
+    const result = await classesCollection.insertOne(newClass);
+    res.status(201).send({ success: true, insertedId: result.insertedId });
+  } catch (error) {
+    res.status(500).send({ message: "Failed to create class", error: error.message });
+  }
+});
+
+ 
+    // PUBLIC CLASSES API (WITH EXTENDED SAFETY & FALLBACK QUERY)
+   
+    /*app.get('/api/public-classes', async (req, res) => {
+      try {
+       
+        const collection = typeof classesCollection !== 'undefined' ? classesCollection : classCollection;
+
+        if (!collection) {
+          console.error(" Classes collection reference is missing in server.js!");
+          return res.status(500).send({ message: "Collection reference not found" });
+        }
+        let query = { status: { $in: ["approved", "accepted", "Approved", "Accepted"] } };
+        let result = await collection.find(query).toArray();
+
+        if (result.length === 0) {
+          console.log("⚠️ No classes found with status filter. Fetching all available documents as fallback...");
+          result = await collection.find({}).toArray();
+        }
+
+        res.send(result);
+      } catch (error) {
+        console.error("Error in /api/public-classes backend route:", error);
+        res.status(500).send({ message: "Internal Server Error", error: error.message });
+      }
+    });*/
+    
+    app.get('/api/public-classes', async (req, res) => {
+  try {
+    const collection = typeof classesCollection !== 'undefined' ? classesCollection : classCollection;
+
+    if (!collection) {
+      return res.status(500).send({ message: "Collection reference not found" });
+    }
+    const query = { status: { $in: ["approved", "accepted", "Approved", "Accepted"] } };
+    let result = await collection.find(query).toArray();
+    const cleanedResult = result.map(item => ({
+      ...item,
+      totalSeats: item.totalSeats || 0,
+      bookedSlots: item.bookedSlots || 0
+    }));
+
+    res.send(cleanedResult);
+  } catch (error) {
+    console.error("Error in /api/public-classes:", error);
+    res.status(500).send({ message: "Internal Server Error", error: error.message });
+  }
+});
+
+
