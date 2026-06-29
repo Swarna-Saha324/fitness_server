@@ -321,5 +321,11 @@ app.get('/api/users', async (req, res) => {
     res.status(500).send({ message: "Internal Server Error", error: error.message });
   }
 });
-
+app.get('/api/classes/featured', async (req, res) => {
+    const result = await classesCollection.find()
+        .sort({ bookedSlots: -1 }) 
+        .limit(6)
+        .toArray(); 
+    res.send(result);
+});
 
