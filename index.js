@@ -26,4 +26,33 @@ const client = new MongoClient(uri, {
   }
 });
 
+//DATABASE AND ALL API ROUTES BLOCK
+
+/*async function run() {
+  try {
+    // MongoDB Database and Collections Initializing References
+
+    client.connect(() =>{
+      console.log("Connecting to Mongo DB")
+    }). catch(console.dir)*/
+    async function connectDB() {
+  try {
+    await client.connect();
+    console.log("Successfully connected to MongoDB Atlas!");
+  } catch (error) {
+    console.error("MongoDB Connection Failed:", error);
+  }
+}
+connectDB();
+
+    
+    const database = client.db("fitnessGym");
+    const usersCollection = database.collection("user");
+    const trainerApplicationsCollection = database.collection("trainerApplications");
+    const classesCollection = database.collection("classes");
+    const forumPostsCollection = database.collection("forumPosts");
+    const bookingsCollection = database.collection("bookings");
+    const favoritesCollection = database.collection("favorites");
+
+    console.log("Connected successfully to MongoDB [fitnessGym]!");
 
