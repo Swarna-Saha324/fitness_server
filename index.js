@@ -689,6 +689,74 @@ app.get('/api/forums/:id', async (req, res) => {
       }
     });
 
-   
+    // ২. ট্রেইনারের নিজের ক্লাস ডিলিট করার এপিআই
+    app.delete('/api/classes/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await classesCollection.deleteOne(query);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: error.message });
+      }
+    });
+app.patch('/api/classes/increment-booking/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { userEmail } = req.body;
+
+        const result = await classesCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { 
+                $inc: { bookedSlots: 1 }, 
+                $push: { attendees: userEmail } 
+            }
+        );
+        res.send({ success: true, result });
+    } catch (error) {
+        res.status(500).send({ message: error.message });
+    }
+});
+
+
+
+//  } finally {
+    
+ // }
+//}
+
+
+    // 9. STRIPE PAYMENT INTENT GENERATION PIPELINE 
+    
+    app.post("/api/create-payment-intent", async (req, res) => { 
+      try {
+        const { price } = req.body;
+        
+        if (!price || isNaN(price)) {
+          return res.status(400).send({ message: "Invalid or missing price parameter" });
+        }
+
+        
+        const amount = Math.round(parseFloat(price) * 100);
+
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amount,
+          currency: "usd",
+          payment_method_types: ["card"],
+        });
+
+        res.send({
+          clientSecret: paymentIntent.client_secret,
+        });
+      } catch (error) {
+        res.status(500).send({ message: "Stripe Intent generation failure", error: error.message });
+      }
+    });
+
+//run().catch(console.dir);
+
+app.listen(port, () => {
+  console.log(` Server is running hot on port: ${port}`);
+});
 
 
