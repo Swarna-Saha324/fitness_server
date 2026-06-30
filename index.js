@@ -405,3 +405,30 @@ app.get('/api/classes/featured', async (req, res) => {
       }
     });
 
+     // 6. FAVORITES INTERACTION MATRIX
+
+    app.post('/api/favorites/toggle', async (req, res) => {
+      try {
+        const { classId, userEmail, className, image, price } = req.body;
+        if (!classId || !userEmail) return res.status(400).send({ message: "Required Context Missing" });
+
+        const queryFilter = {
+          userEmail,
+          $or: [ { classId: classId }, { classId: ObjectId.isValid(classId) ? new ObjectId(classId) : classId } ]
+        };
+
+        const existing = await favoritesCollection.findOne(queryFilter);
+        if (existing) {
+          await favoritesCollection.deleteOne(queryFilter);
+          return res.send({ success: true, isFavorited: false, message: "Removed from favorites" });
+        }
+
+        const favoriteDoc = { classId, userEmail, className, image, price: parseFloat(price) || 0, createdAt: new Date() };
+        await favoritesCollection.insertOne(favoriteDoc);
+        res.send({ success: true, isFavorited: true, message: "Successfully added to your favorites!" });
+      } catch (error) {
+        res.status(500).send({ message: error.message });
+      }
+    });
+
+
