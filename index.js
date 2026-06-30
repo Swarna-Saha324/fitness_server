@@ -759,4 +759,6 @@ app.listen(port, () => {
   console.log(` Server is running hot on port: ${port}`);
 });
 
+module.exports=app;
+
 
