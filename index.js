@@ -526,6 +526,169 @@ app.get('/api/classes/featured', async (req, res) => {
       }
     });
 
+    //  8. COMMUNITY FORUM MANAGEMENT PIPELINE (WITH VOTING MATRIX)
+  
+    app.post('/api/forums', async (req, res) => {
+      try {
+        const postData = req.body;
+        const newPost = {
+          title: postData.title,
+          image: postData.image,
+          description: postData.description,
+          authorEmail: postData.trainerEmail || postData.authorEmail,
+          authorName: postData.trainerName || postData.authorName,
+          authorRole: postData.authorRole || "trainer",
+          upVotes: [],
+          downVotes: [],
+          createdAt: new Date()
+        };
+        const result = await forumPostsCollection.insertOne(newPost);
+        res.status(201).send({ success: true, insertedId: result.insertedId });
+      } catch (error) {
+        res.status(500).send({ message: "Failed to post", error: error.message });
+      }
+    });
+    
+
+    app.get('/api/forums', async (req, res) => {
+      try {
+        const result = await forumPostsCollection.find().sort({ createdAt: -1 }).toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: error.message });
+      }
+    });
+
+    app.get('/api/my-forums', async (req, res) => {
+      try {
+        const email = req.query.email;
+        if (!email) return res.status(400).send({ message: "Email target parameter missing!" });
+        
+        const result = await forumPostsCollection.find({ authorEmail: email }).sort({ createdAt: -1 }).toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: error.message });
+      }
+    });
+    
+
+
+
+app.get('/api/forums/latest', async (req, res) => {
+    const result = await forumPostsCollection.find()
+        .sort({ _id: -1 }) 
+        .limit(4)
+        .toArray(); // 
+    res.send(result);
+});
+
+    app.patch('/api/forum/:id/vote', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { voteType, userEmail } = req.body; // ফ্রন্টএন্ড থেকে ইমেইল পাঠাতে হবে
+
+    if (!userEmail) {
+      return res.status(400).send({ message: "User email is required" });
+    }
+
+    const query = { _id: new ObjectId(id) };
+    let updateDoc = {};
+
+   
+    if (voteType === 'upvote') {
+      updateDoc = { $addToSet: { upVotes: userEmail }, $pull: { downVotes: userEmail } };
+    } else if (voteType === 'downvote') {
+      updateDoc = { $addToSet: { downVotes: userEmail }, $pull: { upVotes: userEmail } };
+    }
+
+    const result = await forumPostsCollection.updateOne(query, updateDoc);
+    res.send({ success: true, result });
+  } catch (error) {
+    res.status(500).send({ message: error.message });
+  }
+});
+    app.delete('/api/admin/forums/:id', async (req, res) => {
+      try {
+        const result = await forumPostsCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+        res.send({ success: true, result });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+app.get('/api/forums/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log("Searching for ID in forumPostsCollection:", id); // এই লগটি টার্মিনালে চেক করুন
+
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).send({ message: "Invalid ID format" });
+        }
+
+        const result = await forumPostsCollection.findOne({ _id: new ObjectId(id) });
+        
+        if (!result) {
+            console.log("Post not found in database");
+            return res.status(404).send({ message: "Post not found" });
+        }
+        res.send(result);
+    } catch (error) {
+        console.error("Database Error:", error);
+        res.status(500).send({ message: error.message });
+    }
+});
+   
+    
+    
+    app.get('/api/trainer/classes', async (req, res) => {
+      try {
+        const trainerEmail = req.query.email;
+        if (!trainerEmail) return res.status(400).send({ message: "Trainer email required" });
+
+        const cleanEmail = trainerEmail.trim().toLowerCase();
+
+        
+        const trainerClasses = await classesCollection.find({
+          $or: [
+            { trainerEmail: { $regex: new RegExp(`^${cleanEmail}$`, 'i') } },
+            { email: { $regex: new RegExp(`^${cleanEmail}$`, 'i') } }
+          ]
+        }).toArray();
+
+        let allBookings = [];
+        try {
+          allBookings = await bookingsCollection.find({}).toArray();
+        } catch (bookingErr) {
+          console.log("Bookings fetch skipped:", bookingErr.message);
+        }
+
+      
+        const enrichedClasses = trainerClasses.map(singleClass => {
+          const classIdStr = singleClass._id ? singleClass._id.toString() : '';
+          
+          const attendees = allBookings
+            .filter(book => 
+              (book.classId && book.classId === classIdStr) || 
+              (book.className && book.className === singleClass.name)
+            )
+            .map(book => ({
+              name: book.userName || book.name || "Active Member",
+              email: book.userEmail || book.email || "No Email"
+            }));
+
+          return {
+            ...singleClass,
+            attendees: attendees
+          };
+        });
+
+        res.send(enrichedClasses);
+      } catch (error) {
+        console.error("Trainer classes route error:", error);
+        res.status(500).send({ message: error.message });
+      }
+    });
+
    
 
 
