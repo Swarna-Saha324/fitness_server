@@ -374,3 +374,34 @@ app.get('/api/classes/featured', async (req, res) => {
       }
     });
 
+    app.get('/api/admin/all-classes', async (req, res) => {
+      try {
+        const allClasses = await classesCollection.find({}).toArray();
+        res.send(allClasses);
+      } catch (error) {
+        res.status(500).send({ message: error.message });
+      }
+    });
+
+    app.patch('/api/admin/classes/:id', async (req, res) => {
+      try {
+        const { status } = req.body;
+        const result = await classesCollection.updateOne(
+          { _id: new ObjectId(req.params.id) },
+          { $set: { status: status } }
+        );
+        res.send({ success: true, result });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    app.delete('/api/admin/classes/:id', async (req, res) => {
+      try {
+        const result = await classesCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+        res.send({ success: true, result });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
