@@ -340,3 +340,37 @@ app.get('/api/classes/featured', async (req, res) => {
       }
     });
 
+    app.get('/api/classes/:id',  async (req, res) => {
+      try {
+        const id = req.params.id;
+        if (!ObjectId.isValid(id)) return res.status(400).send({ message: "Invalid ID format" });
+        const result = await classesCollection.findOne({ _id: new ObjectId(id) });
+        if (!result) return res.status(404).send({ message: "Class not found" });
+        res.send(result);
+        
+      } catch (error) {
+        console.log(error)
+        res.status(500).send({ message: error.message });
+      }
+    });
+
+    app.post('/api/classes/:id/status', async (req, res) => {
+      try {
+        const classId = req.params.id;
+        const { email } = req.body;
+        if (!email) return res.status(400).send({ message: "User email required" });
+        if (!ObjectId.isValid(classId)) return res.status(400).send({ message: "Invalid ID format" });
+
+        const queryFilter = {
+          userEmail: email,
+          $or: [ { classId: classId }, { classId: new ObjectId(classId) } ]
+        };
+        const isBooked = await bookingsCollection.findOne(queryFilter);
+        const isFavorite = await favoritesCollection.findOne(queryFilter);
+
+        res.send({ hasBooked: !!isBooked, hasFavorited: !!isFavorite });
+      } catch (error) {
+        res.status(500).send({ message: error.message });
+      }
+    });
+
