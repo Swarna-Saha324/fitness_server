@@ -462,4 +462,70 @@ app.get('/api/classes/featured', async (req, res) => {
       }
     });
 
+    //  7. TRANSACTIONS MANAGEMENT PAGE
+
+ 
+   /* app.post('/api/bookings/confirm', async (req, res) => {
+      try {
+        const bookingData = req.body;
+        const result = await bookingsCollection.insertOne(bookingData);
+        res.status(201).send({ success: true, insertedId: result.insertedId });
+      } catch (error) {
+        res.status(500).send({ message: "Failed to store transaction log", error: error.message });
+      }
+    });*/
+
+    app.post('/api/bookings/confirm', async (req, res) => {
+  try {
+    const { classId, userEmail, ...bookingData } = req.body;
+
+    // ১. প্রথমে দেখুন ওই ক্লাসটি আছে কি না
+    const query = { _id: new ObjectId(classId) };
+    const fitnessClass = await classesCollection.findOne(query);
+
+    if (!fitnessClass) {
+      return res.status(404).send({ message: "Class not found" });
+    }
+
+    // ২. সিট ফাঁকা আছে কি না চেক করুন (আপনার ডাটাবেজে totalSeats ফিল্ডটি থাকতে হবে)
+    if (fitnessClass.bookedSlots >= fitnessClass.totalSeats) {
+      return res.status(400).send({ message: "No seats available for this class!" });
+    }
+
+    // ৩. বুকিং কনফার্ম করুন
+    const result = await bookingsCollection.insertOne({ 
+      ...bookingData, 
+      classId: new ObjectId(classId), 
+      userEmail 
+    });
+
+    // ৪. ক্লাসের সিট সংখ্যা ১ বাড়িয়ে দিন (Atomically)
+    await classesCollection.updateOne(
+      query, 
+      { $inc: { bookedSlots: 1 } }
+    );
+
+    res.status(201).send({ success: true, insertedId: result.insertedId });
+  } catch (error) {
+    res.status(500).send({ message: "Transaction failed", error: error.message });
+  }
+});
+    app.get('/api/admin/transactions', async (req, res) => {
+      try {
+        const collection = typeof bookingsCollection !== 'undefined' ? bookingsCollection : bookingCollection;
+        
+        if (!collection) {
+          console.error(" MongoDB Booking Collection reference is missing in server.js!");
+          return res.send([]); 
+        }
+        const history = await collection.find({}).sort({ bookingDate: -1 }).toArray();
+        res.send(history);
+      } catch (error) {
+        console.error("Backend Error in /api/admin/transactions:", error);
+        res.status(500).send({ message: "Internal server error reading bookings", error: error.message });
+      }
+    });
+
+   
+
 
