@@ -431,4 +431,35 @@ app.get('/api/classes/featured', async (req, res) => {
       }
     });
 
+    //  6. FAVORITES INTERACTION MATRIX (GET & DELETE ADDED)
+    app.get('/api/favorites', async (req, res) => {
+      try {
+        const userEmail = req.query.email;
+        if (!userEmail) {
+          return res.status(400).send({ message: "Email parameter required" });
+        }
+        
+       
+        const list = await favoritesCollection.find({ userEmail: userEmail }).toArray();
+        res.send(list);
+      } catch (error) {
+        res.status(500).send({ message: error.message });
+      }
+    });
+
+    
+    app.delete('/api/favorites/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { 
+          _id: ObjectId.isValid(id) ? new ObjectId(id) : id 
+        };
+        
+        const result = await favoritesCollection.deleteOne(query);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: error.message });
+      }
+    });
+
 
