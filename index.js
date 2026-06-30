@@ -329,3 +329,14 @@ app.get('/api/classes/featured', async (req, res) => {
     res.send(result);
 });
 
+ app.get('/api/my-classes', async (req, res) => {
+      try {
+        const email = req.query.email;
+        if (!email) return res.status(400).send({ message: "Trainer email is missing!" });
+        const result = await classesCollection.find({ trainerEmail: email }).sort({ createdAt: -1 }).toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: error.message });
+      }
+    });
+
